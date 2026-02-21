@@ -1,0 +1,9 @@
+{
+  "name": "filmcalc",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @filmcalc/web dev"
+  }
+}
