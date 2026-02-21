@@ -10,6 +10,7 @@ import { LayerEditor } from './components/LayerEditor';
 import { StackDiagram } from './components/StackDiagram';
 import { ResultsSummary } from './components/ResultsSummary';
 import { Toolbar } from './components/Toolbar';
+import type { SampleConfig } from './samples';
 import './style.css';
 
 const DEFAULT_LAYERS: Layer[] = [
@@ -74,6 +75,13 @@ function App() {
     setLayers(l => l.map((layer, i) => i === idx ? { ...layer, ...patch } : layer));
   }, []);
 
+  const loadSample = useCallback((sample: SampleConfig) => {
+    setLayers(sample.data.layers.map(l => ({ materialId: l.material, thickness: l.thickness })));
+    setSubstrate(sample.data.substrate);
+    setStartNm(sample.data.wavelengthRange.startNm);
+    setEndNm(sample.data.wavelengthRange.endNm);
+  }, []);
+
   const moveLayer = useCallback((idx: number, dir: -1 | 1) => {
     setLayers(l => {
       const next = [...l];
@@ -95,6 +103,7 @@ function App() {
         startNm={startNm} endNm={endNm} stepNm={stepNm}
         onStartNm={setStartNm} onEndNm={setEndNm} onStepNm={setStepNm}
         onAddLayer={addLayer}
+        onLoadSample={loadSample}
         onExportCSV={handleExportCSV}
         onExportPNG={handleExportPNG}
         dark={dark} onToggleDark={() => setDark(d => !d)}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { samples, type SampleConfig } from '../samples';
 
 interface Props {
   startNm: number;
@@ -8,6 +9,7 @@ interface Props {
   onEndNm: (v: number) => void;
   onStepNm: (v: number) => void;
   onAddLayer: () => void;
+  onLoadSample: (sample: SampleConfig) => void;
   onExportCSV: () => void;
   onExportPNG: () => void;
   dark: boolean;
@@ -17,12 +19,26 @@ interface Props {
 export function Toolbar({
   startNm, endNm, stepNm,
   onStartNm, onEndNm, onStepNm,
-  onAddLayer, onExportCSV, onExportPNG,
+  onAddLayer, onLoadSample, onExportCSV, onExportPNG,
   dark, onToggleDark,
 }: Props) {
   return (
     <div className="toolbar">
       <button className="btn" onClick={onAddLayer}>＋ Add Layer</button>
+
+      <select
+        className="btn btn-outline"
+        value=""
+        onChange={e => {
+          const s = samples.find(s => s.id === e.target.value);
+          if (s) onLoadSample(s);
+        }}
+      >
+        <option value="" disabled>📂 Samples</option>
+        {samples.map(s => (
+          <option key={s.id} value={s.id} title={s.description}>{s.name}</option>
+        ))}
+      </select>
 
       <div className="spacer" />
 
