@@ -155,7 +155,7 @@ function App() {
             </span>
           </h2>
           <div ref={chartRef}>
-            <SpectrumChart spectrum={spectrum} />
+            <SpectrumChart spectrum={spectrum} dark={dark} />
           </div>
         </div>
 

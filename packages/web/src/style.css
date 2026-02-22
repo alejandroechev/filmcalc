@@ -9,6 +9,8 @@
   --danger: #dc3545;
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --color-r: #e63946;
+  --color-t: #457b9d;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
@@ -19,6 +21,8 @@ html.dark {
   --text2: #adb5bd;
   --border: #333;
   --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  --color-r: #ff6b6b;
+  --color-t: #74b9d8;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -156,6 +160,8 @@ body {
 }
 .stack-bar.incident { background: #e3f2fd; border-style: dashed; }
 .stack-bar.substrate { background: #f5f5f5; border-style: dashed; }
+html.dark .stack-bar.incident { background: #1a3a5c; color: #b0d4f1; }
+html.dark .stack-bar.substrate { background: #2a2a2a; color: #adb5bd; }
 
 /* Results summary */
 .results-grid {

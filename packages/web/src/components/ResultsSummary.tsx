@@ -10,7 +10,7 @@ export function ResultsSummary({ summary }: Props) {
     <div className="results-grid">
       <div className="result-card">
         <div className="label">Peak Reflectance</div>
-        <div className="value" style={{ color: '#e63946' }}>
+        <div className="value" style={{ color: 'var(--color-r)' }}>
           {(summary.peakR.value * 100).toFixed(1)}%
         </div>
         <div className="sub">at {summary.peakR.wavelength} nm</div>
@@ -18,7 +18,7 @@ export function ResultsSummary({ summary }: Props) {
 
       <div className="result-card">
         <div className="label">Peak Transmittance</div>
-        <div className="value" style={{ color: '#457b9d' }}>
+        <div className="value" style={{ color: 'var(--color-t)' }}>
           {(summary.peakT.value * 100).toFixed(1)}%
         </div>
         <div className="sub">at {summary.peakT.wavelength} nm</div>
