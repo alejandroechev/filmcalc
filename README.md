@@ -4,7 +4,7 @@
 
 Replace expensive desktop tools (TFCalc, Essential Macleod) with a fast, open-source web app that computes reflectance and transmittance spectra using the Transfer Matrix Method.
 
-![FilmCalc screenshot](docs/screenshot.png) <!-- TODO: add screenshot -->
+![FilmCalc Screenshot](docs/screenshot.png)
 
 ## Features
 
