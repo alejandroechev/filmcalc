@@ -12,6 +12,9 @@ interface Props {
   onLoadSample: (sample: SampleConfig) => void;
   dark: boolean;
   onToggleDark: () => void;
+  onNew: () => void;
+  onOpenFile: () => void;
+  onSave: () => void;
 }
 
 export function Toolbar({
@@ -19,10 +22,12 @@ export function Toolbar({
   onStartNm, onEndNm, onStepNm,
   onAddLayer, onLoadSample,
   dark, onToggleDark,
+  onNew, onOpenFile, onSave,
 }: Props) {
   return (
     <div className="toolbar">
-      <button className="btn" onClick={onAddLayer}>＋ Add Layer</button>
+      <button className="btn" data-testid="new-btn" onClick={onNew}>📄 New</button>
+      <button className="btn" data-testid="open-btn" onClick={onOpenFile}>📂 Open</button>
 
       <select
         className="btn btn-outline"
@@ -37,6 +42,10 @@ export function Toolbar({
           <option key={s.id} value={s.id} title={s.description}>{s.name}</option>
         ))}
       </select>
+
+      <button className="btn" data-testid="save-btn" onClick={onSave}>💾 Save</button>
+
+      <button className="btn" onClick={onAddLayer}>＋ Add Layer</button>
 
       <label>λ start</label>
       <input type="number" value={startNm} min={200} max={2000}

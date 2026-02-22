@@ -500,3 +500,70 @@ test.describe('Dark Theme & Layout', () => {
     expect(stackBox!.y + stackBox!.height).toBeGreaterThan(editorBox!.y);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+//  STATE PERSISTENCE
+// ════════════════════════════════════════════════════════════════════
+
+test.describe('State Persistence', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  test('layer stack persists across reload', async ({ page }) => {
+    // Add a second layer
+    await page.getByText('＋ Add Layer').click();
+    expect(await layerRowCount(page)).toBe(2);
+    await page.waitForTimeout(700);
+    await page.reload();
+    expect(await layerRowCount(page)).toBe(2);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  NEW / OPEN / SAVE
+// ════════════════════════════════════════════════════════════════════
+
+test.describe('New / Open / Save', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  test('New button resets to default stack', async ({ page }) => {
+    await page.getByText('＋ Add Layer').click();
+    expect(await layerRowCount(page)).toBe(2);
+    await page.locator('[data-testid="new-btn"]').click();
+    expect(await layerRowCount(page)).toBe(1);
+    await expect(page.locator('.layer-table tbody tr').first()).toContainText('MgF2');
+  });
+
+  test('Save button triggers JSON download', async ({ page }) => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('[data-testid="save-btn"]').click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('filmcalc-config.json');
+  });
+
+  test('New, Open, Save buttons are visible', async ({ page }) => {
+    await expect(page.locator('[data-testid="new-btn"]')).toBeVisible();
+    await expect(page.locator('[data-testid="open-btn"]')).toBeVisible();
+    await expect(page.locator('[data-testid="save-btn"]')).toBeVisible();
+  });
+
+  test('button order: New, Open, Samples, Save before spacer', async ({ page }) => {
+    const toolbar = page.locator('.toolbar');
+    const html = await toolbar.innerHTML();
+    const newIdx = html.indexOf('new-btn');
+    const openIdx = html.indexOf('open-btn');
+    const samplesIdx = html.indexOf('Samples');
+    const saveIdx = html.indexOf('save-btn');
+    const spacerIdx = html.indexOf('spacer');
+    const guideIdx = html.indexOf('Guide');
+    expect(newIdx).toBeLessThan(openIdx);
+    expect(openIdx).toBeLessThan(samplesIdx);
+    expect(samplesIdx).toBeLessThan(saveIdx);
+    expect(saveIdx).toBeLessThan(spacerIdx);
+    expect(spacerIdx).toBeLessThan(guideIdx);
+  });
+});

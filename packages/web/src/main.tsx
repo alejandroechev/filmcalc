@@ -20,19 +20,47 @@ const DEFAULT_LAYERS: Layer[] = [
   { materialId: 'MgF2', thickness: 100 },
 ];
 
+const STORAGE_KEY = 'filmcalc-state';
+
+interface SavedState {
+  layers: Layer[];
+  substrate: string;
+  startNm: number;
+  endNm: number;
+  stepNm: number;
+}
+
+function loadSavedState(): SavedState | null {
+  try {
+    const json = localStorage.getItem(STORAGE_KEY);
+    if (!json) return null;
+    return JSON.parse(json);
+  } catch { return null; }
+}
+
 function App() {
-  const [layers, setLayers] = useState<Layer[]>(DEFAULT_LAYERS);
-  const [substrate, setSubstrate] = useState('BK7');
-  const [startNm, setStartNm] = useState(300);
-  const [endNm, setEndNm] = useState(1100);
-  const [stepNm, setStepNm] = useState(5);
+  const saved = loadSavedState();
+  const [layers, setLayers] = useState<Layer[]>(saved?.layers ?? DEFAULT_LAYERS);
+  const [substrate, setSubstrate] = useState(saved?.substrate ?? 'BK7');
+  const [startNm, setStartNm] = useState(saved?.startNm ?? 300);
+  const [endNm, setEndNm] = useState(saved?.endNm ?? 1100);
+  const [stepNm, setStepNm] = useState(saved?.stepNm ?? 5);
   const [dark, setDark] = useState(() => localStorage.getItem('filmcalc-theme') === 'dark');
   const chartRef = useRef<HTMLDivElement>(null);
+  const openFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     localStorage.setItem('filmcalc-theme', dark ? 'dark' : 'light');
   }, [dark]);
+
+  // Debounced persistence
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ layers, substrate, startNm, endNm, stepNm })); } catch { /* noop */ }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [layers, substrate, startNm, endNm, stepNm]);
 
   const stack: StackDef = useMemo(() => ({
     incident: 'Air',
@@ -97,6 +125,41 @@ function App() {
     setLayers(l => l.map((layer, i) => i === idx ? { ...layer, ...patch } : layer));
   }, []);
 
+  const handleNew = useCallback(() => {
+    setLayers([...DEFAULT_LAYERS]);
+    setSubstrate('BK7');
+    setStartNm(300);
+    setEndNm(1100);
+    setStepNm(5);
+  }, []);
+
+  const handleOpen = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const config = JSON.parse(ev.target?.result as string) as SavedState;
+        if (config.layers) setLayers(config.layers);
+        if (config.substrate) setSubstrate(config.substrate);
+        if (config.startNm) setStartNm(config.startNm);
+        if (config.endNm) setEndNm(config.endNm);
+        if (config.stepNm) setStepNm(config.stepNm);
+      } catch { alert('Invalid JSON config file'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, []);
+
+  const handleSave = useCallback(() => {
+    const config: SavedState = { layers, substrate, startNm, endNm, stepNm };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'filmcalc-config.json'; a.click();
+    URL.revokeObjectURL(url);
+  }, [layers, substrate, startNm, endNm, stepNm]);
+
   const loadSample = useCallback((sample: SampleConfig) => {
     setLayers(sample.data.layers.map(l => ({ materialId: l.material, thickness: l.thickness })));
     setSubstrate(sample.data.substrate);
@@ -127,7 +190,12 @@ function App() {
         onAddLayer={addLayer}
         onLoadSample={loadSample}
         dark={dark} onToggleDark={() => setDark(d => !d)}
+        onNew={handleNew}
+        onOpenFile={() => openFileRef.current?.click()}
+        onSave={handleSave}
       />
+      <input ref={openFileRef} type="file" accept=".json" style={{ display: 'none' }}
+        onChange={handleOpen} data-testid="open-file-input" />
 
       <div className="main-grid">
         <div className="panel editor-panel">
