@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
+import { inject } from '@vercel/analytics';
 import {
   listMaterialIds, getMaterial, computeSpectrum, summarizeSpectrum,
   spectrumToCSV, layerSummary,
@@ -12,6 +13,8 @@ import { ResultsSummary } from './components/ResultsSummary';
 import { Toolbar } from './components/Toolbar';
 import type { SampleConfig } from './samples';
 import './style.css';
+
+inject();
 
 const DEFAULT_LAYERS: Layer[] = [
   { materialId: 'MgF2', thickness: 100 },
