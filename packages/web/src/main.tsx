@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { inject } from '@vercel/analytics';
 import {
@@ -26,8 +26,13 @@ function App() {
   const [startNm, setStartNm] = useState(300);
   const [endNm, setEndNm] = useState(1100);
   const [stepNm, setStepNm] = useState(5);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem('filmcalc-theme') === 'dark');
   const chartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('filmcalc-theme', dark ? 'dark' : 'light');
+  }, [dark]);
 
   const stack: StackDef = useMemo(() => ({
     incident: 'Air',
@@ -66,6 +71,20 @@ function App() {
     a.click();
   }, [dark]);
 
+  const handleExportSVG = useCallback(() => {
+    if (!chartRef.current) return;
+    const svg = chartRef.current.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'filmcalc-chart.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
   const addLayer = useCallback(() => {
     setLayers(l => [...l, { materialId: 'SiO2', thickness: 100 }]);
   }, []);
@@ -96,7 +115,7 @@ function App() {
   }, []);
 
   return (
-    <div className={`app ${dark ? 'dark' : 'light'}`}>
+    <div className="app">
       <header className="header">
         <h1>🎞️ FilmCalc</h1>
         <span className="subtitle">Thin Film Optics Calculator</span>
@@ -107,8 +126,6 @@ function App() {
         onStartNm={setStartNm} onEndNm={setEndNm} onStepNm={setStepNm}
         onAddLayer={addLayer}
         onLoadSample={loadSample}
-        onExportCSV={handleExportCSV}
-        onExportPNG={handleExportPNG}
         dark={dark} onToggleDark={() => setDark(d => !d)}
       />
 
@@ -125,20 +142,29 @@ function App() {
           />
         </div>
 
-        <div className="panel chart-panel">
-          <h2>R / T Spectrum</h2>
-          <div ref={chartRef}>
-            <SpectrumChart spectrum={spectrum} />
-          </div>
-        </div>
-
         <div className="panel stack-panel">
           <h2>Stack Diagram</h2>
           <StackDiagram layers={layers} substrate={substrate} />
         </div>
 
+        <div className="panel chart-panel">
+          <h2>R / T Spectrum
+            <span className="panel-actions">
+              <button onClick={handleExportPNG} title="Export PNG">🖼️ PNG</button>
+              <button onClick={handleExportSVG} title="Export SVG">📐 SVG</button>
+            </span>
+          </h2>
+          <div ref={chartRef}>
+            <SpectrumChart spectrum={spectrum} />
+          </div>
+        </div>
+
         <div className="panel summary-panel">
-          <h2>Results</h2>
+          <h2>Results
+            <span className="panel-actions">
+              <button onClick={handleExportCSV} title="Export CSV">📄 CSV</button>
+            </span>
+          </h2>
           <ResultsSummary summary={summary} />
         </div>
       </div>

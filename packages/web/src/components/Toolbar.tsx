@@ -10,8 +10,6 @@ interface Props {
   onStepNm: (v: number) => void;
   onAddLayer: () => void;
   onLoadSample: (sample: SampleConfig) => void;
-  onExportCSV: () => void;
-  onExportPNG: () => void;
   dark: boolean;
   onToggleDark: () => void;
 }
@@ -19,7 +17,7 @@ interface Props {
 export function Toolbar({
   startNm, endNm, stepNm,
   onStartNm, onEndNm, onStepNm,
-  onAddLayer, onLoadSample, onExportCSV, onExportPNG,
+  onAddLayer, onLoadSample,
   dark, onToggleDark,
 }: Props) {
   return (
@@ -40,8 +38,6 @@ export function Toolbar({
         ))}
       </select>
 
-      <div className="spacer" />
-
       <label>λ start</label>
       <input type="number" value={startNm} min={200} max={2000}
         onChange={e => onStartNm(Number(e.target.value))} />
@@ -56,12 +52,10 @@ export function Toolbar({
 
       <div className="spacer" />
 
-      <button className="btn btn-outline" onClick={onExportCSV}>📄 CSV</button>
-      <button className="btn btn-outline" onClick={onExportPNG}>🖼️ PNG</button>
       <button className="btn btn-outline" onClick={() => window.open('/intro.html', '_blank')}>📖 Guide</button>
       <button className="btn btn-outline" onClick={() => window.open('https://github.com/alejandroechev/filmcalc/issues/new', '_blank')} title="Feedback">💬 Feedback</button>
-      <button className="btn btn-outline" onClick={onToggleDark}>
-        {dark ? '☀️ Light' : '🌙 Dark'}
+      <button className="btn btn-outline" data-testid="theme-toggle" onClick={onToggleDark}>
+        {dark ? '☀️' : '🌙'}
       </button>
     </div>
   );

@@ -335,16 +335,16 @@ test.describe('UI Features', () => {
   });
 
   test('theme toggle switches between light and dark', async ({ page }) => {
-    const app = page.locator('.app');
-    await expect(app).toHaveClass(/light/);
+    // Default is light (no dark class on html)
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
 
     // Click dark mode
-    await page.getByText('🌙 Dark').click();
-    await expect(app).toHaveClass(/dark/);
+    await page.locator('[data-testid="theme-toggle"]').click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
 
     // Click back to light
-    await page.getByText('☀️ Light').click();
-    await expect(app).toHaveClass(/light/);
+    await page.locator('[data-testid="theme-toggle"]').click();
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
   });
 
   test('guide button exists', async ({ page }) => {
@@ -366,12 +366,16 @@ test.describe('UI Features', () => {
     }
   });
 
-  test('CSV export button exists', async ({ page }) => {
-    await expect(page.getByText('📄 CSV')).toBeVisible();
+  test('CSV export button exists in results panel', async ({ page }) => {
+    await expect(page.locator('.summary-panel .panel-actions button')).toContainText('CSV');
   });
 
-  test('PNG export button exists', async ({ page }) => {
-    await expect(page.getByText('🖼️ PNG')).toBeVisible();
+  test('PNG export button exists in chart panel', async ({ page }) => {
+    await expect(page.locator('.chart-panel .panel-actions button').first()).toContainText('PNG');
+  });
+
+  test('SVG export button exists in chart panel', async ({ page }) => {
+    await expect(page.locator('.chart-panel .panel-actions button').nth(1)).toContainText('SVG');
   });
 });
 
@@ -448,5 +452,51 @@ test.describe('Edge Cases', () => {
     const avgR = page.locator('.result-card').filter({ hasText: 'Avg R' }).locator('.value');
     const text = await avgR.textContent();
     expect(parseFloat(text!)).toBeLessThan(1);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  DARK THEME & LAYOUT
+// ════════════════════════════════════════════════════════════════════
+
+test.describe('Dark Theme & Layout', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  test('dark theme renders correct background and text colors', async ({ page }) => {
+    await page.locator('[data-testid="theme-toggle"]').click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+
+    const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bodyBg).toBe('rgb(18, 18, 18)');
+
+    const bodyColor = await page.evaluate(() => getComputedStyle(document.body).color);
+    expect(bodyColor).toBe('rgb(224, 224, 224)');
+
+    const panelBg = await page.locator('.panel').first().evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(panelBg).toBe('rgb(30, 30, 30)');
+  });
+
+  test('dark theme persists across page reload', async ({ page }) => {
+    await page.locator('[data-testid="theme-toggle"]').click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+  });
+
+  test('stack diagram is positioned next to layer controls', async ({ page }) => {
+    const editorBox = await page.locator('.editor-panel').boundingBox();
+    const stackBox = await page.locator('.stack-panel').boundingBox();
+
+    expect(editorBox).not.toBeNull();
+    expect(stackBox).not.toBeNull();
+
+    // Stack should be to the right of editor
+    expect(stackBox!.x).toBeGreaterThan(editorBox!.x + editorBox!.width - 20);
+    // Stack and editor should share the same vertical area
+    expect(stackBox!.y).toBeLessThan(editorBox!.y + editorBox!.height);
+    expect(stackBox!.y + stackBox!.height).toBeGreaterThan(editorBox!.y);
   });
 });
