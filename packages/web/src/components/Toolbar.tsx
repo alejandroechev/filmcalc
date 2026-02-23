@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { samples, type SampleConfig } from '../samples';
+import { FeedbackModal } from './FeedbackModal';
 
 interface Props {
   startNm: number;
@@ -24,6 +25,8 @@ export function Toolbar({
   dark, onToggleDark,
   onNew, onOpenFile, onSave,
 }: Props) {
+  const [showFeedback, setShowFeedback] = useState(false);
+
   return (
     <div className="toolbar">
       <button className="btn" data-testid="new-btn" onClick={onNew}>📄 New</button>
@@ -62,10 +65,12 @@ export function Toolbar({
       <div className="spacer" />
 
       <button className="btn btn-outline" onClick={() => window.open('/intro.html', '_blank')}>📖 Guide</button>
-      <button className="btn btn-outline" onClick={() => window.open('https://github.com/alejandroechev/filmcalc/issues/new', '_blank')} title="Feedback">💬 Feedback</button>
+      <button className="btn btn-outline" onClick={() => setShowFeedback(true)} title="Feedback">💬 Feedback</button>
+      <a href="https://github.com/alejandroechev/filmcalc" target="_blank" rel="noopener" className="github-link">GitHub</a>
       <button className="btn btn-outline" data-testid="theme-toggle" onClick={onToggleDark}>
         {dark ? '☀️' : '🌙'}
       </button>
+      <FeedbackModal open={showFeedback} onClose={() => setShowFeedback(false)} product="FilmCalc" />
     </div>
   );
 }
