@@ -85,7 +85,7 @@ test.describe('Samples', () => {
   });
 
   test('all sample names appear in dropdown', async ({ page }) => {
-    const options = page.locator('select.btn.btn-outline option:not([disabled])');
+    const options = page.locator('[data-testid="sample-select"] option:not([disabled])');
     const texts = await options.allTextContents();
     for (const name of sampleNames) {
       expect(texts).toContainEqual(name);
@@ -93,7 +93,7 @@ test.describe('Samples', () => {
   });
 
   test('load Single-Layer AR → 1 layer, spectrum recalculates', async ({ page }) => {
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'Single-Layer AR (MgF₂)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'Single-Layer AR (MgF₂)' });
     expect(await layerRowCount(page)).toBe(1);
     await waitForChart(page);
     // Stack diagram should show 1 layer
@@ -101,19 +101,19 @@ test.describe('Samples', () => {
   });
 
   test('load V-Coat AR → 2 layers', async ({ page }) => {
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'V-Coat AR (TiO₂/SiO₂)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'V-Coat AR (TiO₂/SiO₂)' });
     expect(await layerRowCount(page)).toBe(2);
     await waitForChart(page);
   });
 
   test('load Broadband AR → 4 layers', async ({ page }) => {
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'Broadband AR (4-Layer)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'Broadband AR (4-Layer)' });
     expect(await layerRowCount(page)).toBe(4);
     await waitForChart(page);
   });
 
   test('load High Reflector → 6 layers, high R', async ({ page }) => {
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'High Reflector (6-Layer)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'High Reflector (6-Layer)' });
     expect(await layerRowCount(page)).toBe(6);
     await waitForChart(page);
     // Peak R should be very high (>90%)
@@ -124,7 +124,7 @@ test.describe('Samples', () => {
   });
 
   test('load Dichroic Filter → 10 layers', async ({ page }) => {
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'Dichroic Filter (Blue-Reflect)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'Dichroic Filter (Blue-Reflect)' });
     expect(await layerRowCount(page)).toBe(10);
     await waitForChart(page);
   });
@@ -135,7 +135,7 @@ test.describe('Samples', () => {
     const endInput = page.locator('input[type="number"]').nth(1);
 
     // Load V-Coat (range 400-800)
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'V-Coat AR (TiO₂/SiO₂)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'V-Coat AR (TiO₂/SiO₂)' });
     await expect(startInput).toHaveValue('400');
     await expect(endInput).toHaveValue('800');
   });
@@ -283,6 +283,28 @@ test.describe('Wavelength Range', () => {
     await page.goto('/');
   });
 
+  test('range preset selector includes default and IR options', async ({ page }) => {
+    const options = page.locator('[data-testid="range-preset-select"] option');
+    await expect(options).toHaveCount(8);
+    await expect(page.locator('[data-testid="range-preset-select"]')).toHaveValue('default');
+  });
+
+  test('selecting MWIR preset updates wavelength inputs', async ({ page }) => {
+    await page.locator('[data-testid="range-preset-select"]').selectOption('mwir');
+    const startInput = page.locator('input[type="number"]').nth(0);
+    const endInput = page.locator('input[type="number"]').nth(1);
+    await expect(startInput).toHaveValue('3000');
+    await expect(endInput).toHaveValue('5000');
+    await waitForChart(page);
+  });
+
+  test('editing range manually switches preset to custom', async ({ page }) => {
+    const startInput = page.locator('input[type="number"]').nth(0);
+    await startInput.fill('620');
+    await expect(page.locator('[data-testid="range-preset-select"]')).toHaveValue('custom');
+    await waitForChart(page);
+  });
+
   test('change wavelength range → chart updates', async ({ page }) => {
     await waitForChart(page);
     // Change start to 400
@@ -352,9 +374,23 @@ test.describe('UI Features', () => {
     await expect(guideBtn).toBeVisible();
   });
 
+  test('toolbar has second row for Add Layer through step controls', async ({ page }) => {
+    const rowMain = page.locator('.toolbar-row-main');
+    const rowControls = page.locator('.toolbar-row-controls');
+    await expect(rowMain).toBeVisible();
+    await expect(rowControls).toBeVisible();
+    const addLayer = page.getByText('＋ Add Layer');
+    await expect(addLayer).toBeVisible();
+    const mainBox = await rowMain.boundingBox();
+    const controlsBox = await rowControls.boundingBox();
+    expect(mainBox).not.toBeNull();
+    expect(controlsBox).not.toBeNull();
+    expect(controlsBox!.y).toBeGreaterThan(mainBox!.y + 1);
+  });
+
   test('stack diagram layer heights are proportional', async ({ page }) => {
     // Load high reflector (layers of varying thickness)
-    await page.locator('select.btn.btn-outline').selectOption({ label: 'High Reflector (6-Layer)' });
+    await page.locator('[data-testid="sample-select"]').selectOption({ label: 'High Reflector (6-Layer)' });
     const bars = page.locator('.stack-diagram .stack-bar:not(.incident):not(.substrate)');
     const count = await bars.count();
     expect(count).toBe(6);
@@ -517,6 +553,19 @@ test.describe('State Persistence', () => {
     await page.waitForTimeout(700);
     await page.reload();
     expect(await layerRowCount(page)).toBe(2);
+  });
+
+  test('range preset and values persist across reload', async ({ page }) => {
+    await page.locator('[data-testid="range-preset-select"]').selectOption('lwir');
+    const startInput = page.locator('input[type="number"]').nth(0);
+    const endInput = page.locator('input[type="number"]').nth(1);
+    await expect(startInput).toHaveValue('8000');
+    await expect(endInput).toHaveValue('14000');
+    await page.waitForTimeout(700);
+    await page.reload();
+    await expect(page.locator('[data-testid="range-preset-select"]')).toHaveValue('lwir');
+    await expect(startInput).toHaveValue('8000');
+    await expect(endInput).toHaveValue('14000');
   });
 });
 

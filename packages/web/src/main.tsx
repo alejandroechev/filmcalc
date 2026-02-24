@@ -10,7 +10,7 @@ import { SpectrumChart } from './components/SpectrumChart';
 import { LayerEditor } from './components/LayerEditor';
 import { StackDiagram } from './components/StackDiagram';
 import { ResultsSummary } from './components/ResultsSummary';
-import { Toolbar } from './components/Toolbar';
+import { Toolbar, type RangePresetId } from './components/Toolbar';
 import type { SampleConfig } from './samples';
 import './style.css';
 
@@ -28,6 +28,7 @@ interface SavedState {
   startNm: number;
   endNm: number;
   stepNm: number;
+  rangePreset?: RangePresetId;
 }
 
 function loadSavedState(): SavedState | null {
@@ -38,13 +39,41 @@ function loadSavedState(): SavedState | null {
   } catch { return null; }
 }
 
+const RANGE_PRESETS: Record<Exclude<RangePresetId, 'custom'>, { start: number; end: number }> = {
+  default: { start: 300, end: 1100 },
+  uv: { start: 200, end: 400 },
+  vis: { start: 400, end: 700 },
+  visnir: { start: 400, end: 1100 },
+  swir: { start: 900, end: 2500 },
+  mwir: { start: 3000, end: 5000 },
+  lwir: { start: 8000, end: 14000 },
+};
+
+function normalizeRange(startNm: number, endNm: number): { startNm: number; endNm: number } {
+  const boundedStart = Math.max(200, Math.min(20000, Math.round(startNm)));
+  const boundedEnd = Math.max(200, Math.min(20000, Math.round(endNm)));
+  return boundedStart <= boundedEnd
+    ? { startNm: boundedStart, endNm: boundedEnd }
+    : { startNm: boundedEnd, endNm: boundedStart };
+}
+
+function detectPreset(startNm: number, endNm: number): RangePresetId {
+  const matched = (Object.entries(RANGE_PRESETS) as Array<[Exclude<RangePresetId, 'custom'>, { start: number; end: number }]>)
+    .find(([, range]) => range.start === startNm && range.end === endNm);
+  return matched ? matched[0] : 'custom';
+}
+
 function App() {
   const saved = loadSavedState();
+  const initialRange = normalizeRange(saved?.startNm ?? 300, saved?.endNm ?? 1100);
   const [layers, setLayers] = useState<Layer[]>(saved?.layers ?? DEFAULT_LAYERS);
   const [substrate, setSubstrate] = useState(saved?.substrate ?? 'BK7');
-  const [startNm, setStartNm] = useState(saved?.startNm ?? 300);
-  const [endNm, setEndNm] = useState(saved?.endNm ?? 1100);
+  const [startNm, setStartNm] = useState(initialRange.startNm);
+  const [endNm, setEndNm] = useState(initialRange.endNm);
   const [stepNm, setStepNm] = useState(saved?.stepNm ?? 5);
+  const [rangePreset, setRangePreset] = useState<RangePresetId>(
+    saved?.rangePreset ?? detectPreset(initialRange.startNm, initialRange.endNm),
+  );
   const [dark, setDark] = useState(() => localStorage.getItem('filmcalc-theme') === 'dark');
   const chartRef = useRef<HTMLDivElement>(null);
   const openFileRef = useRef<HTMLInputElement>(null);
@@ -57,10 +86,10 @@ function App() {
   // Debounced persistence
   useEffect(() => {
     const timer = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ layers, substrate, startNm, endNm, stepNm })); } catch { /* noop */ }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ layers, substrate, startNm, endNm, stepNm, rangePreset })); } catch { /* noop */ }
     }, 500);
     return () => clearTimeout(timer);
-  }, [layers, substrate, startNm, endNm, stepNm]);
+  }, [layers, substrate, startNm, endNm, stepNm, rangePreset]);
 
   const stack: StackDef = useMemo(() => ({
     incident: 'Air',
@@ -131,6 +160,7 @@ function App() {
     setStartNm(300);
     setEndNm(1100);
     setStepNm(5);
+    setRangePreset('default');
   }, []);
 
   const handleOpen = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,8 +172,12 @@ function App() {
         const config = JSON.parse(ev.target?.result as string) as SavedState;
         if (config.layers) setLayers(config.layers);
         if (config.substrate) setSubstrate(config.substrate);
-        if (config.startNm) setStartNm(config.startNm);
-        if (config.endNm) setEndNm(config.endNm);
+        if (config.startNm && config.endNm) {
+          const nextRange = normalizeRange(config.startNm, config.endNm);
+          setStartNm(nextRange.startNm);
+          setEndNm(nextRange.endNm);
+          setRangePreset(config.rangePreset ?? detectPreset(nextRange.startNm, nextRange.endNm));
+        }
         if (config.stepNm) setStepNm(config.stepNm);
       } catch { alert('Invalid JSON config file'); }
     };
@@ -152,7 +186,7 @@ function App() {
   }, []);
 
   const handleSave = useCallback(() => {
-    const config: SavedState = { layers, substrate, startNm, endNm, stepNm };
+    const config: SavedState = { layers, substrate, startNm, endNm, stepNm, rangePreset };
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -163,9 +197,33 @@ function App() {
   const loadSample = useCallback((sample: SampleConfig) => {
     setLayers(sample.data.layers.map(l => ({ materialId: l.material, thickness: l.thickness })));
     setSubstrate(sample.data.substrate);
-    setStartNm(sample.data.wavelengthRange.startNm);
-    setEndNm(sample.data.wavelengthRange.endNm);
+    const nextRange = normalizeRange(sample.data.wavelengthRange.startNm, sample.data.wavelengthRange.endNm);
+    setStartNm(nextRange.startNm);
+    setEndNm(nextRange.endNm);
+    setRangePreset(detectPreset(nextRange.startNm, nextRange.endNm));
   }, []);
+
+  const handleRangePreset = useCallback((preset: RangePresetId) => {
+    setRangePreset(preset);
+    if (preset === 'custom') return;
+    const next = RANGE_PRESETS[preset];
+    setStartNm(next.start);
+    setEndNm(next.end);
+  }, []);
+
+  const handleStartNm = useCallback((value: number) => {
+    const next = normalizeRange(value, endNm);
+    setStartNm(next.startNm);
+    setEndNm(next.endNm);
+    setRangePreset(detectPreset(next.startNm, next.endNm));
+  }, [endNm]);
+
+  const handleEndNm = useCallback((value: number) => {
+    const next = normalizeRange(startNm, value);
+    setStartNm(next.startNm);
+    setEndNm(next.endNm);
+    setRangePreset(detectPreset(next.startNm, next.endNm));
+  }, [startNm]);
 
   const moveLayer = useCallback((idx: number, dir: -1 | 1) => {
     setLayers(l => {
@@ -186,7 +244,9 @@ function App() {
 
       <Toolbar
         startNm={startNm} endNm={endNm} stepNm={stepNm}
-        onStartNm={setStartNm} onEndNm={setEndNm} onStepNm={setStepNm}
+        rangePreset={rangePreset}
+        onStartNm={handleStartNm} onEndNm={handleEndNm} onStepNm={setStepNm}
+        onRangePreset={handleRangePreset}
         onAddLayer={addLayer}
         onLoadSample={loadSample}
         dark={dark} onToggleDark={() => setDark(d => !d)}
