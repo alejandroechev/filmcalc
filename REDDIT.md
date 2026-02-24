@@ -12,7 +12,7 @@ Built a free web app for thin film optical design. FilmCalc uses the transfer ma
 
 It includes a built-in material library with n,k dispersion data for common dielectrics (SiO2, TiO2, MgF2, Si3N4), metals (Al, Ag, Au), and substrates (BK7, fused silica). Design your coating layer by layer and see the R/T spectrum update.
 
-No Essential Macleod license needed. No install, no login, open source.
+Open source and runs in the browser with no install required.
 
 🔗 **Live:** https://filmcalc.vercel.app
 📂 **Source:** https://github.com/alejandroechev/filmcalc
@@ -52,3 +52,4 @@ No expensive optical design software needed. Open source, runs in your browser.
 📂 https://github.com/alejandroechev/filmcalc
 
 What features would optical coating engineers find most useful?
+
